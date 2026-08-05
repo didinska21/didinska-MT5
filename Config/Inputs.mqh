@@ -25,7 +25,8 @@
 enum ENUM_ENTRY_MODE
 {
    ENTRY_WAIT_CROSS,        // Wait for EMA Fast/Slow Cross
-   ENTRY_CURRENT_TREND      // Enter immediately based on current trend bias
+   ENTRY_CURRENT_TREND,     // Enter immediately based on current trend bias
+   ENTRY_SCALP_CANDLE       // Enter every new closed candle, direction = that candle's own color
 };
 
 // Recovery lot sizing mode
@@ -52,7 +53,8 @@ enum ENUM_TRADE_STATE
    STATE_RECOVERY_ACTIVE,    // One or more recovery layers are open
    STATE_EMERGENCY_CLOSED,   // Risk engine forced a full close this bar
    STATE_COOLDOWN,           // Waiting out cooldown after a completed cycle
-   STATE_PAUSED_RISK         // Paused due to daily loss / consecutive loss limit
+   STATE_PAUSED_RISK,        // Paused due to daily loss / consecutive loss limit
+   STATE_TARGET_REACHED      // Profit target reached - EA permanently halted (until restart)
 };
 
 //====================================================================
@@ -167,6 +169,10 @@ input double  InpMinFreeMarginUSD     = 2.0;                      // Minimum Fre
 
 input bool    InpUseMarginLevelGuard  = true;                     // Enable Margin Level Protection
 input double  InpMinMarginLevelPercent= 150.0;                    // Minimum Margin Level (%) Required For New Layer
+
+input group "==== RISK MANAGEMENT: PROFIT TARGET STOP ===="
+input bool    InpUseProfitTarget      = false;                    // Enable Profit Target Stop (halts EA when reached)
+input double  InpProfitTargetPercent  = 900.0;                    // Target Gain (%) From Starting Balance. Formula: Target Equity = StartBalance * (1 + Percent/100). Example: StartBalance=3000, Percent=900 -> Target=30000 (10x). Percent=1000 -> Target=33000 (11x).
 
 //====================================================================
 // DASHBOARD
