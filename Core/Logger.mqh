@@ -26,6 +26,7 @@ private:
    bool     m_enabled;
    bool     m_csvEnabled;
    bool     m_verbose;
+   bool     m_notificationsEnabled;
    string   m_csvFileName;
    int      m_csvHandle;
    bool     m_headerWritten;
@@ -70,6 +71,7 @@ public:
       m_enabled       = true;
       m_csvEnabled    = false;
       m_verbose       = false;
+      m_notificationsEnabled = true;
       m_csvFileName   = "GoldHedgeRecovery_Log.csv";
       m_csvHandle     = INVALID_HANDLE;
       m_headerWritten = false;
@@ -90,6 +92,7 @@ public:
       m_csvEnabled  = InpEnableCsvLogging;
       m_verbose     = InpVerboseLogging;
       m_csvFileName = InpCsvFileName;
+      m_notificationsEnabled = InpEnablePushNotifications;
 
       if(m_csvEnabled)
          EnsureCsvOpen();
@@ -101,6 +104,39 @@ public:
         {
          FileClose(m_csvHandle);
          m_csvHandle = INVALID_HANDLE;
+        }
+     }
+
+   //-----------------------------------------------------------------
+   // Sends a push notification to the user's MT5 mobile app (requires
+   // MetaQuotes ID configured under Tools > Options > Notifications on
+   // the desktop terminal). Always mirrors the message to the Experts
+   // tab too, so nothing is lost if push isn't configured yet.
+   //
+   // MT5's SendNotification() has a native ~2 messages/second rate
+   // limit enforced server-side; this wrapper does not add extra
+   // throttling on top since callers already only notify on
+   // meaningful, infrequent trading events (not every tick).
+   //-----------------------------------------------------------------
+   void Notify(const string message)
+     {
+      // Always log it, regardless of whether push notifications are enabled
+      Info("[NOTIFY] " + message);
+
+      if(!m_notificationsEnabled)
+         return;
+
+      string text = message;
+      if(StringLen(text) > 255)
+         text = StringSubstr(text, 0, 255); // MT5 hard limit on notification length
+
+      bool sent = SendNotification(text);
+
+      if(!sent && m_enabled)
+        {
+         PrintFormat("[GoldHedgeRecovery][WARN] Push notification failed to send (error %d). "
+                     "Check Tools > Options > Notifications is configured with a valid MetaQuotes ID.",
+                     GetLastError());
         }
      }
 
