@@ -175,6 +175,16 @@ input bool    InpUseProfitTarget      = false;                    // Enable Prof
 input double  InpProfitTargetPercent  = 900.0;                    // Target Gain (%) From Starting Balance. Formula: Target Equity = StartBalance * (1 + Percent/100). Example: StartBalance=3000, Percent=900 -> Target=30000 (10x). Percent=1000 -> Target=33000 (11x).
 
 //====================================================================
+// NOTIFICATIONS
+//====================================================================
+input group "==== NOTIFICATIONS ===="
+input bool    InpEnablePushNotifications = true;   // Send Push Notifications To MT5 Mobile App
+input bool    InpNotifyProfitTarget      = true;   // Notify: Profit Target Reached
+input bool    InpNotifyEmergencyClose    = true;   // Notify: Emergency Close Triggered
+input bool    InpNotifyRecoveryLayer     = true;   // Notify: New Recovery Layer Opened
+input bool    InpNotifyBasketTP          = true;   // Notify: Basket TP Closed (cycle completed)
+
+//====================================================================
 // DASHBOARD
 //====================================================================
 input group "==== DASHBOARD ===="
