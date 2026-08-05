@@ -47,16 +47,16 @@ GoldHedgeRecovery/
 | Fase | Modul | Status |
 |---|---|---|
 | 1 | `Inputs.mqh`, `Utils.mqh`, `Logger.mqh` | ✅ Selesai |
-| 2 | `SMAEngine.mqh`, `EMAFilter.mqh`, `ATRFilter.mqh`, `TrendFilter.mqh` | ⏳ Belum |
-| 3 | `SignalEngine.mqh` | ⏳ Belum |
-| 4 | `TradeEngine.mqh` | ⏳ Belum |
-| 5 | `PositionManager.mqh` | ⏳ Belum |
-| 6 | `RecoveryEngine.mqh` | ⏳ Belum |
-| 7 | `RiskEngine.mqh` | ⏳ Belum |
-| 8 | `Dashboard.mqh`, `SessionManager.mqh` | ⏳ Belum |
-| 9 | `GoldHedgeRecovery.mq5` (main) | ⏳ Belum |
+| 2 | `SMAEngine.mqh`, `EMAFilter.mqh`, `ATRFilter.mqh`, `TrendFilter.mqh` | ✅ Selesai |
+| 3 | `SignalEngine.mqh` | ✅ Selesai |
+| 4 | `TradeEngine.mqh` | ✅ Selesai |
+| 5 | `PositionManager.mqh` | ✅ Selesai |
+| 6 | `RecoveryEngine.mqh` | ✅ Selesai |
+| 7 | `RiskEngine.mqh` | ✅ Selesai |
+| 8 | `Dashboard.mqh`, `SessionManager.mqh` | ✅ Selesai |
+| 9 | `GoldHedgeRecovery.mq5` (main) | ✅ Selesai |
 
-> Dokumen ini akan diperbarui setiap fase baru selesai. Jangan compile project sebelum semua fase selesai — beberapa `#include` di fase awal mereferensikan file yang masih akan dibuat di fase berikutnya.
+> **Semua fase selesai.** Project sudah lengkap 16 file dan siap di-compile di MetaEditor. Ikuti langkah instalasi di bawah, lalu compile (F7) — kalau ada error, kirimkan pesan error lengkapnya untuk diperbaiki.
 
 ---
 
