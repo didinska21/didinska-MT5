@@ -35,6 +35,9 @@ private:
    double   m_peakEquity;
    int      m_consecutiveLosses;
 
+   double   m_startingBalance;   // Balance snapshot taken once at EA Init() - used only for Profit Target Stop
+   bool     m_targetReached;     // Latched true once the profit target has been hit (persists until EA restart)
+
    //-----------------------------------------------------------------
    void CheckDayRollover()
      {
@@ -62,6 +65,8 @@ public:
       m_currentYear       = -1;
       m_peakEquity        = 0.0;
       m_consecutiveLosses = 0;
+      m_startingBalance   = 0.0;
+      m_targetReached     = false;
      }
 
    //-----------------------------------------------------------------
@@ -78,6 +83,16 @@ public:
       m_dayStartBalance   = AccountInfoDouble(ACCOUNT_BALANCE);
       m_peakEquity        = AccountInfoDouble(ACCOUNT_EQUITY);
       m_consecutiveLosses = 0;
+
+      m_startingBalance   = AccountInfoDouble(ACCOUNT_BALANCE);
+      m_targetReached     = false;
+
+      if(InpUseProfitTarget && m_logger != NULL)
+        {
+         double targetEquity = m_startingBalance * (1.0 + InpProfitTargetPercent / 100.0);
+         m_logger.Info(StringFormat("RiskEngine - Profit Target Stop ENABLED. Start balance=%.2f, Target equity=%.2f (+%.1f%%)",
+                        m_startingBalance, targetEquity, InpProfitTargetPercent));
+        }
      }
 
    //-----------------------------------------------------------------
@@ -190,6 +205,35 @@ public:
      }
 
    //-----------------------------------------------------------------
+   // Returns true once account equity has reached the configured
+   // profit target relative to the balance recorded at EA startup.
+   // Once latched true, stays true for the rest of this EA session
+   // (a permanent stop, not a cooldown) — the intent of a profit
+   // target is "we're done, lock in the win", not "pause and retry".
+   //-----------------------------------------------------------------
+   bool IsProfitTargetReached()
+     {
+      if(!InpUseProfitTarget)
+         return false;
+
+      if(m_targetReached)
+         return true; // already latched, no need to recheck
+
+      double targetEquity = m_startingBalance * (1.0 + InpProfitTargetPercent / 100.0);
+      double currentEquity = AccountInfoDouble(ACCOUNT_EQUITY);
+
+      if(currentEquity >= targetEquity)
+        {
+         m_targetReached = true;
+         if(m_logger != NULL)
+            m_logger.Info(StringFormat("RiskEngine - PROFIT TARGET REACHED! Equity=%.2f >= Target=%.2f",
+                           currentEquity, targetEquity));
+        }
+
+      return m_targetReached;
+     }
+
+   //-----------------------------------------------------------------
    // Should new cycles (initial entries) be paused due to too many
    // consecutive losing cycles?
    //-----------------------------------------------------------------
@@ -237,6 +281,8 @@ public:
    double GetDrawdownPercent()   { return CUtils::SafeDivide((m_peakEquity - AccountInfoDouble(ACCOUNT_EQUITY)) * 100.0, m_peakEquity, 0.0); }
    int    GetConsecutiveLosses() const { return m_consecutiveLosses; }
    double GetPeakEquity()        const { return m_peakEquity; }
+   double GetStartingBalance()   const { return m_startingBalance; }
+   bool   IsTargetLatched()      const { return m_targetReached; }
   };
 
 #endif // __GHR_RISKENGINE_MQH__
