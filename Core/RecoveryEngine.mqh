@@ -157,8 +157,48 @@ public:
      }
 
    //-----------------------------------------------------------------
-   // STEP 1 (highest priority): forces a full close of every open
-   // position if RiskEngine says an emergency threshold was breached.
+   // STEP 0 (checked before everything else): if the account has
+   // reached the configured Profit Target, close every open position
+   // immediately and PERMANENTLY halt new entries for the rest of
+   // this EA session (unlike cooldown/emergency-close, this does not
+   // resume automatically — reaching the target is treated as "done").
+   //-----------------------------------------------------------------
+   bool ManageProfitTarget()
+     {
+      if(!InpUseProfitTarget)
+         return false;
+
+      if(!m_riskEngine.IsProfitTargetReached())
+         return false;
+
+      m_state = STATE_TARGET_REACHED;
+
+      if(!m_posMgr.HasOpenPositions())
+         return true; // target already latched, nothing left open to close
+
+      double floatingAtClose = m_posMgr.GetFloatingProfit();
+
+      ulong tickets[];
+      m_posMgr.GetTicketsArray(tickets);
+
+      bool ok = m_tradeEngine.CloseAllPositions(tickets);
+
+      if(m_logger != NULL)
+         m_logger.Info("RecoveryEngine - Profit Target reached, closing all positions and halting new cycles.");
+
+      if(ok)
+        {
+         m_lastCycleCloseTime = TimeCurrent();
+         m_riskEngine.RegisterCycleResult(floatingAtClose);
+        }
+
+      return true;
+     }
+
+   //-----------------------------------------------------------------
+   // STEP 1 (highest priority among the remaining checks): forces a
+   // full close of every open position if RiskEngine says an
+   // emergency threshold was breached.
    //-----------------------------------------------------------------
    bool ManageEmergencyClose()
      {
@@ -393,6 +433,9 @@ public:
    //-----------------------------------------------------------------
    bool ManageRecoveryLayers()
      {
+      if(InpUseProfitTarget && m_riskEngine.IsProfitTargetReached())
+         return false; // target reached - no more layers, ever, this session
+
       if(!m_posMgr.HasOpenPositions())
          return false;
 
@@ -447,6 +490,12 @@ public:
      {
       if(direction == DIRECTION_NONE)
          return false;
+
+      if(InpUseProfitTarget && m_riskEngine.IsProfitTargetReached())
+        {
+         m_state = STATE_TARGET_REACHED;
+         return false; // target reached - EA is permanently done for this session
+        }
 
       if(m_posMgr.HasOpenPositions())
          return false; // a cycle is already active
