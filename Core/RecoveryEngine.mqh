@@ -50,6 +50,7 @@ private:
 
    datetime           m_lastCycleCloseTime;
    ENUM_TRADE_STATE   m_state;
+   bool               m_targetNotified;
 
    //-----------------------------------------------------------------
    // Determines the lot size for the NEXT layer about to be opened.
@@ -101,6 +102,7 @@ public:
       m_customCount        = 0;
       m_lastCycleCloseTime = 0;
       m_state              = STATE_IDLE;
+      m_targetNotified     = false;
      }
 
    //-----------------------------------------------------------------
@@ -173,8 +175,20 @@ public:
 
       m_state = STATE_TARGET_REACHED;
 
+      if(!m_targetNotified)
+        {
+         m_targetNotified = true;
+         if(m_logger != NULL)
+           {
+            m_logger.Info("RecoveryEngine - Profit Target reached.");
+            if(InpNotifyProfitTarget)
+               m_logger.Notify(StringFormat("🎯 PROFIT TARGET REACHED! Equity=%.2f. EA halted, closing any open positions.",
+                                AccountInfoDouble(ACCOUNT_EQUITY)));
+           }
+        }
+
       if(!m_posMgr.HasOpenPositions())
-         return true; // target already latched, nothing left open to close
+         return true; // nothing left open to close
 
       double floatingAtClose = m_posMgr.GetFloatingProfit();
 
@@ -182,9 +196,6 @@ public:
       m_posMgr.GetTicketsArray(tickets);
 
       bool ok = m_tradeEngine.CloseAllPositions(tickets);
-
-      if(m_logger != NULL)
-         m_logger.Info("RecoveryEngine - Profit Target reached, closing all positions and halting new cycles.");
 
       if(ok)
         {
@@ -220,7 +231,11 @@ public:
       bool ok = m_tradeEngine.CloseAllPositions(tickets);
 
       if(m_logger != NULL)
+        {
          m_logger.Warning("EMERGENCY CLOSE triggered: " + reason);
+         if(InpNotifyEmergencyClose)
+            m_logger.Notify(StringFormat("🚨 EMERGENCY CLOSE! Reason: %s. Floating was %.2f.", reason, floatingAtClose));
+        }
 
       m_state = STATE_EMERGENCY_CLOSED;
 
@@ -242,6 +257,19 @@ public:
 
       if(!m_posMgr.HasOpenPositions())
          return false;
+
+      // IMPORTANT: once a recovery layer is active, closing one side
+      // individually would break the hedge - the remaining side would
+      // be left "naked" without its backup. Individual TP is therefore
+      // only allowed while there is a single position (Layer 0) open,
+      // i.e. before any recovery has been triggered. Once layerCount > 1,
+      // only Basket TP is allowed to close the whole basket together.
+      if(m_posMgr.GetLayerCount() > 1)
+        {
+         if(m_logger != NULL)
+            m_logger.Debug("RecoveryEngine - Individual TP skipped (recovery active, basket must close together)");
+         return false;
+        }
 
       ulong tickets[];
       int count = m_posMgr.GetTicketsAtOrAboveProfit(InpIndividualTPUSD, tickets);
@@ -281,7 +309,11 @@ public:
       bool ok = m_tradeEngine.CloseAllPositions(tickets);
 
       if(m_logger != NULL)
+        {
          m_logger.Info(StringFormat("RecoveryEngine - Basket TP reached (%.2f >= %.2f), closing all layers", floating, InpBasketTPUSD));
+         if(InpNotifyBasketTP)
+            m_logger.Notify(StringFormat("✅ Basket TP hit! Profit: %.2f. Cycle complete.", floating));
+        }
 
       if(ok)
          OnCycleClosed(floating);
@@ -473,8 +505,13 @@ public:
         {
          m_state = STATE_RECOVERY_ACTIVE;
          if(m_logger != NULL)
+           {
             m_logger.Info(StringFormat("RecoveryEngine - opened recovery layer %d, direction=%s, lot=%.2f",
                            layerCount, (newDirection == DIRECTION_BUY) ? "BUY" : "SELL", nextLot));
+            if(InpNotifyRecoveryLayer)
+               m_logger.Notify(StringFormat("⚠️ Recovery Layer %d opened (%s, lot %.2f). Basket floating: %.2f",
+                                layerCount, (newDirection == DIRECTION_BUY) ? "BUY" : "SELL", nextLot, floating));
+           }
         }
 
       return ok;
