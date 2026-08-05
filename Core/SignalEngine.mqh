@@ -78,6 +78,32 @@ private:
      }
 
    //-----------------------------------------------------------------
+   // ENTRY_SCALP_CANDLE: direction is simply the color of the last
+   // CLOSED candle (bullish close>open -> BUY, bearish -> SELL).
+   // No indicator required - this fires on almost every new bar,
+   // by design, for a "always look for an entry" scalping style.
+   //-----------------------------------------------------------------
+   bool GetScalpCandleDirection(ENUM_TRADE_DIRECTION &outDirection)
+     {
+      outDirection = DIRECTION_NONE;
+
+      double openPrice  = iOpen(m_symbol, m_timeframe, 1);
+      double closePrice = iClose(m_symbol, m_timeframe, 1);
+
+      if(openPrice <= 0.0 || closePrice <= 0.0)
+         return false;
+
+      if(closePrice > openPrice)
+         outDirection = DIRECTION_BUY;
+      else if(closePrice < openPrice)
+         outDirection = DIRECTION_SELL;
+      else
+         outDirection = DIRECTION_NONE; // perfectly flat doji, skip
+
+      return true;
+     }
+
+   //-----------------------------------------------------------------
    // Returns true only the FIRST time this is called for a given
    // closed-bar timestamp, preventing duplicate signals within the
    // same bar.
@@ -125,7 +151,7 @@ public:
             ok = false;
            }
         }
-      else // ENTRY_CURRENT_TREND
+      else if(InpEntryMode == ENTRY_CURRENT_TREND)
         {
          if(!m_entryEma.InitTrendEma(symbol, timeframe, InpTrendEmaPeriod, logger))
            {
@@ -134,6 +160,8 @@ public:
             ok = false;
            }
         }
+      // ENTRY_SCALP_CANDLE requires no indicator handle - direction comes
+      // straight from candle open/close, nothing to initialize here.
 
       if(InpUseAtrFilter)
         {
@@ -182,9 +210,14 @@ public:
          if(!m_entryEma.DetectCross(rawDirection))
             return false; // data not ready yet, don't consume the bar slot
         }
-      else
+      else if(InpEntryMode == ENTRY_CURRENT_TREND)
         {
          if(!m_entryEma.GetTrendBias(rawDirection))
+            return false;
+        }
+      else // ENTRY_SCALP_CANDLE
+        {
+         if(!GetScalpCandleDirection(rawDirection))
             return false;
         }
 
