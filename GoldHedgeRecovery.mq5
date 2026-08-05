@@ -168,10 +168,17 @@ string GetStateText()
   {
    ENUM_TRADE_STATE state = g_recoveryEngine.GetState();
 
+   // Profit Target Stop always takes display priority - once reached,
+   // the EA is permanently done for this session regardless of
+   // whatever position/cooldown state would otherwise apply.
+   if(InpUseProfitTarget && state == STATE_TARGET_REACHED)
+     {
+      // keep as-is, skip all overrides below
+     }
    // Override with live baseline state when a cycle is actively open,
    // since RecoveryEngine's stored m_state may lag by one tick right
    // after a fresh initial entry.
-   if(g_positionMgr.HasOpenPositions())
+   else if(g_positionMgr.HasOpenPositions())
       state = g_positionMgr.DetermineBaselineState();
    else if(g_recoveryEngine.IsInCycleCooldown())
       state = STATE_COOLDOWN;
@@ -184,6 +191,7 @@ string GetStateText()
       case STATE_EMERGENCY_CLOSED: return "EMERGENCY_CLOSED";
       case STATE_COOLDOWN:         return "COOLDOWN";
       case STATE_PAUSED_RISK:      return "PAUSED (Consecutive Losses)";
+      case STATE_TARGET_REACHED:   return "TARGET REACHED - HALTED";
       default:                     return "UNKNOWN";
      }
   }
@@ -230,7 +238,15 @@ void OnTick()
    //---    line depends on this being current for this tick.
    g_positionMgr.Refresh();
 
-   //--- 3. Highest priority: emergency close overrides everything else
+   //--- 3a. Absolute highest priority: profit target reached means the
+   //---     EA is permanently done for this session - check this first.
+   if(g_recoveryEngine.ManageProfitTarget())
+     {
+      UpdateDashboard();
+      return;
+     }
+
+   //--- 3b. Highest priority among remaining checks: emergency close
    if(g_recoveryEngine.ManageEmergencyClose())
      {
       UpdateDashboard();
