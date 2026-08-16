@@ -44,7 +44,7 @@ except ImportError:
 
 # URL worker kamu, TANPA trailing slash. Contoh:
 # "https://didinska-signal.<subdomain-kamu>.workers.dev"
-WORKER_URL = "https://didinska-signal.didinska21.workers.dev"
+WORKER_URL = "https://didinska-signal.mr-didinska21.workers.dev"
 
 # Harus SAMA PERSIS dengan secret MT5_BRIDGE_SECRET yang di-set di Worker
 # (npx wrangler secret put MT5_BRIDGE_SECRET).
